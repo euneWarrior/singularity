@@ -396,11 +396,17 @@ def handle_activity(rocket):
                   for sub in submissions]
     table_content = '</tr>\n<tr>'.join(''.join(row) for row in table_data)
 
-    return rocket.respond(f"""<table>
-<tr><th>Timestamp</th><th>Assignment</th><th>Submission ID</th><th>Status</th></tr>
-<tr>{table_content}</tr>
-</table>
-""")
+    return rocket.respond(f"""
+    <table>
+      <tr>
+        <th>Timestamp</th>
+        <th>Assignment</th>
+        <th>Submission ID</th>
+        <th>Status</th>
+      </tr>
+      <tr>{table_content}</tr>
+    </table>
+    """)
 
 
 def find_creds_for_registration(student_id):
