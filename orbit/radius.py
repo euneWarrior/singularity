@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, urlparse
 import config
 import db
 import mailman.db
+import denis.db
 
 sec_per_min = 60
 min_per_ses = config.minutes_each_session_token_is_valid
@@ -411,6 +412,36 @@ def handle_activity(rocket):
     """)
 
 
+class AsmtTable:
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return f"""
+        <table>
+          <caption><h3>{self.name}</h3></caption>
+          <tr>
+            <th>Total Score: -</th>
+            <th>Timestamp</th>
+            <th>Submission ID</th>
+            <th>Request an 'Oopsie'</th>
+          </tr>
+        </table>
+        <br>
+        """
+
+
+def handle_dashboard(rocket):
+    if not rocket.session:
+        return rocket.raw_respond(HTTPStatus.FORBIDDEN)
+    ret = ''
+    asmt_tbl = denis.db.Assignment
+    assignments = asmt_tbl.select().order_by(asmt_tbl.initial_due_date)
+    for assignment in assignments:
+        ret += str(AsmtTable(assignment.name))
+    return rocket.respond(ret)
+
+
 def find_creds_for_registration(student_id):
     password = secrets.token_urlsafe(nbytes=config.num_bytes_entropy_for_pw)
     salt = bcrypt.gensalt()
@@ -566,6 +597,8 @@ def application(env, SR):
             return handle_login(rocket)
         case '/register':
             return handle_register(rocket)
+        case '/dashboard':
+            return handle_dashboard(rocket)
         case _:
             if rocket.method != 'GET':
                 return rocket.raw_respond(HTTPStatus.METHOD_NOT_ALLOWED)
