@@ -442,8 +442,11 @@ class AsmtTable:
 
     def oops_button(self):
         return f"""
-        <button {'disabled' if self.oopsieness != OopsStatus.AVAILABLE else ''}
-         title='{self.oops_button_hover()}'>Oopsie!</button>
+        <button type='submit' name='oopsie' value='{self.name}'
+            {'disabled' if self.oopsieness != OopsStatus.AVAILABLE else ''}
+            title='{self.oops_button_hover()}'>
+          Oopsie!
+        </button>
         """
 
     def body(self):
@@ -531,7 +534,9 @@ def get_asmt_oopsieness(oops, cur_assignment, initial_due):
 def handle_dashboard(rocket):
     if not rocket.session:
         return rocket.raw_respond(HTTPStatus.FORBIDDEN)
-    ret = ''
+    if rocket.method != 'GET':
+        print(f'dashboard post req: {rocket.body_args_query("oopsie")}')
+    ret = '<form method="post" action="/dashboard">'
     asmt_tbl = denis.db.Assignment
     oops_tbl = db.Oopsie
     assignments = asmt_tbl.select().order_by(asmt_tbl.initial_due_date)
@@ -542,7 +547,7 @@ def handle_dashboard(rocket):
         oopsieness = get_asmt_oopsieness(oops, assignment.name,
                                          assignment.initial_due_date)
         ret += str(AsmtTable(assignment.name, oopsieness))
-    return rocket.respond(ret)
+    return rocket.respond(ret + '</form>')
 
 
 def find_creds_for_registration(student_id):
