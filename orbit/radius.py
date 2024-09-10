@@ -491,6 +491,10 @@ def handle_dashboard(rocket):
                 <button type="submit" name="confirm" value="y">Confirm</button>
                 </form>
             ''')
+        try:
+            db.Oopsie.create(user=rocket.session.username, assignment=asn)
+        except db.peewee.IntegrityError:
+            return rocket.raw_respond(HTTPStatus.BAD_REQUEST)
         print(f'dashboard post req: {rocket.body_args_query("oopsie")}')
     ret = '<form method="post" action="/dashboard">'
     sub_tbl = mailman.db.Submission
