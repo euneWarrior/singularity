@@ -428,6 +428,80 @@ class AsmtTable:
         self.name = name
         self.oopsieness = oopsieness
 
+    def oops_button_hover(self):
+        match self.oopsieness:
+            case OopsStatus.PAST_DUE:
+                return (f"Too late to oopsie! {self.name} "
+                        "initial submission is past due!")
+            case OopsStatus.AVAILABLE:
+                return f"Click to use your oopsie on {self.name}"
+            case OopsStatus.USED_HERE:
+                return "Oopsie used here!"
+            case OopsStatus.UNAVAILABLE:
+                return "You have already used your oopsie"
+
+    def oops_button(self):
+        return f"""
+        <button {'disabled' if self.oopsieness != OopsStatus.AVAILABLE else ''}
+         title='{self.oops_button_hover()}'>Oopsie!</button>
+        """
+
+    def body(self):
+        if self.oopsieness == OopsStatus.USED_HERE:
+            return f"""
+            <tr>
+              <th>Final Submission</th>
+              <td>-</td>
+              <td>-</td>
+              <th>{self.oops_button()}</th>
+            </tr>
+            <tr>
+              <th>Comments</th>
+              <td colspan=3>-</td>
+            </tr>
+            """
+        else:
+            return f"""
+            <tr>
+              <th>Initial Submission</th>
+              <td>-</td>
+              <td>-</td>
+              <th>{self.oops_button()}</th>
+            </tr>
+            <tr>
+              <th>Automated Feedback</th>
+              <td colspan=3>-</td>
+            </tr>
+            <tr>
+              <th></th>
+              <th>Timestamp</th>
+              <th>Submission ID</th>
+              <th>Score</th>
+            </tr>
+            <tr>
+              <th>Peer Review 1</th>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <th>Peer Review 2</th>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <th>Final Submission</th>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <th>Comments</th>
+              <td colspan=3>-</th>
+            </tr>
+            """
+
     def __str__(self):
         return f"""
         <table>
@@ -438,6 +512,7 @@ class AsmtTable:
             <th>Submission ID</th>
             <th>Request an 'Oopsie'</th>
           </tr>
+          {self.body()}
         </table>
         <br>
         """
