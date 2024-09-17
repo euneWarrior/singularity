@@ -37,6 +37,10 @@ def check_credentials(username, password):
     return bcrypt.checkpw(password.encode(), user.pwdhash.encode())
 
 
+def now():
+    return int(datetime.utcnow().timestamp())
+
+
 # === user session handling ===
 
 class Session:
@@ -412,9 +416,17 @@ def handle_activity(rocket):
     """)
 
 
+class OopsStatus:
+    PAST_DUE = 0
+    AVAILABLE = 1
+    USED_HERE = 2
+    UNAVAILABLE = 3
+
+
 class AsmtTable:
-    def __init__(self, name):
+    def __init__(self, name, oopsieness):
         self.name = name
+        self.oopsieness = oopsieness
 
     def __str__(self):
         return f"""
@@ -431,14 +443,30 @@ class AsmtTable:
         """
 
 
+def get_asmt_oopsieness(oops, cur_assignment, initial_due):
+    if initial_due < now():
+        return OopsStatus.PAST_DUE
+    if not oops:
+        return OopsStatus.AVAILABLE
+    if oops.assignment == cur_assignment:
+        return OopsStatus.USED_HERE
+    return OopsStatus.UNAVAILABLE
+
+
 def handle_dashboard(rocket):
     if not rocket.session:
         return rocket.raw_respond(HTTPStatus.FORBIDDEN)
     ret = ''
     asmt_tbl = denis.db.Assignment
+    oops_tbl = db.Oopsie
     assignments = asmt_tbl.select().order_by(asmt_tbl.initial_due_date)
+    oops = (oops_tbl.select()
+                    .where(oops_tbl.user == rocket.session.username)
+                    .first())
     for assignment in assignments:
-        ret += str(AsmtTable(assignment.name))
+        oopsieness = get_asmt_oopsieness(oops, assignment.name,
+                                         assignment.initial_due_date)
+        ret += str(AsmtTable(assignment.name, oopsieness))
     return rocket.respond(ret)
 
 
