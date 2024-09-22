@@ -67,6 +67,29 @@ def main(argv):
         gr_db.create(submission_id=logfile, timestamp=timestamp, user=user,
                      assignment=asn.name, component=typ, comments=feedback)
 
+    if reply_id:
+        if not (orig := gr_db.get_or_none(gr_db.submission_id == reply_id)):
+            return 0
+        asn_name = orig.assignment
+        asn = asn_db.get_or_none(asn_name == asn_db.name)
+        if not asn or timestamp > asn.peer_review_due_date:
+            return 0
+        rev_db = denis.db.PeerReviewAssignment
+        rev = rev_db.get_or_none(rev_db.assignment == asn_name &
+                                 rev_db.reviewer == user)
+        if not rev:
+            return 0
+        match emails[0].rcpt:
+            case rev.reviewee1:
+                typ = 'review1'
+            case rev.reviewee2:
+                typ = 'review2'
+            case _:
+                return 0
+        gr_db.create(submission_id=logfile, timestamp=timestamp,
+                     user=user, assignment=asn_name, component=typ,
+                     comments=None)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
