@@ -5,6 +5,8 @@ from pathlib import Path
 import sys
 
 import db
+import denis.db
+import patchset
 
 
 Email = collections.namedtuple('Email', ['rcpt', 'msg_id'])
@@ -22,6 +24,7 @@ def main(argv):
     with open(Path(logdir) / logfile) as log:
         header, *email_lines = log.readlines()
     timestamp, user = header.split()
+    timestamp = int(timestamp)
 
     emails = [email_from_log_line(line) for line in email_lines]
 
@@ -49,6 +52,20 @@ def main(argv):
     db.Submission.create(submission_id=logfile, timestamp=timestamp,
                          user=user, recipient=emails[0].rcpt,
                          email_count=len(emails), in_reply_to=reply_id)
+
+    asn_db = denis.db.Assignment
+    gr_db = db.Gradeable
+    if asn := asn_db.get_or_none(asn_db.name == emails[0].rcpt):
+        if len(emails) < 2:
+            return 0
+        typ = ('initial' if timestamp < asn.initial_due_date
+               else 'final' if timestamp < asn.final_due_date else None)
+        if not typ:
+            return 0
+        cover_letter, *patches = emails
+        feedback = patchset.check(cover_letter, patches, logfile)
+        gr_db.create(submission_id=logfile, timestamp=timestamp, user=user,
+                     assignment=asn.name, component=typ, comments=feedback)
 
 
 if __name__ == "__main__":
