@@ -424,9 +424,13 @@ class OopsStatus:
 
 
 class AsmtTable:
-    def __init__(self, name, oopsieness):
+    def __init__(self, name, oopsieness, init, p1, p2, final):
         self.name = name
         self.oopsieness = oopsieness
+        self.initial = init
+        self.peer1 = p1
+        self.peer2 = p2
+        self.final = final
 
     def oops_button_hover(self):
         match self.oopsieness:
@@ -454,8 +458,8 @@ class AsmtTable:
             return f"""
             <tr>
               <th>Final Submission</th>
-              <td>-</td>
-              <td>-</td>
+              <td>{self.final.timestamp if self.final else '-'}</td>
+              <td>{self.final.submission_id if self.final else '-'}</td>
               <th>{self.oops_button()}</th>
             </tr>
             <tr>
@@ -467,13 +471,13 @@ class AsmtTable:
             return f"""
             <tr>
               <th>Initial Submission</th>
-              <td>-</td>
-              <td>-</td>
+              <td>{self.initial.timestamp if self.initial else '-'}</td>
+              <td>{self.initial.submission_id if self.initial else '-'}</td>
               <th>{self.oops_button()}</th>
             </tr>
             <tr>
               <th>Automated Feedback</th>
-              <td colspan=3>-</td>
+              <td colspan=3>{self.initial.comments if self.initial else '-'}</td>
             </tr>
             <tr>
               <th></th>
@@ -483,20 +487,20 @@ class AsmtTable:
             </tr>
             <tr>
               <th>Peer Review 1</th>
-              <td>-</td>
-              <td>-</td>
+              <td>{self.peer1.timestamp if self.peer1 else '-'}</td>
+              <td>{self.peer1.submission_id if self.peer1 else '-'}</td>
               <td>-</td>
             </tr>
             <tr>
               <th>Peer Review 2</th>
-              <td>-</td>
-              <td>-</td>
+              <td>{self.peer2.timestamp if self.peer2 else '-'}</td>
+              <td>{self.peer2.submission_id if self.peer2 else '-'}</td>
               <td>-</td>
             </tr>
             <tr>
               <th>Final Submission</th>
-              <td>-</td>
-              <td>-</td>
+              <td>{self.final.timestamp if self.final else '-'}</td>
+              <td>{self.final.submission_id if self.final else '-'}</td>
               <td>-</td>
             </tr>
             <tr>
@@ -558,14 +562,24 @@ def handle_dashboard(rocket):
             return rocket.raw_respond(HTTPStatus.BAD_REQUEST)
     ret = '<form method="post" action="/dashboard">'
     oops_tbl = db.Oopsie
+    grd_tbl = mailman.db.Gradeable
     assignments = asmt_tbl.select().order_by(asmt_tbl.initial_due_date)
     oops = (oops_tbl.select()
                     .where(oops_tbl.user == rocket.session.username)
                     .first())
+    user_gradeables = (grd_tbl.select()
+                       .where(grd_tbl.user == rocket.session.username)
+                       .order_by(grd_tbl.timestamp.desc()))
     for assignment in assignments:
+        asn_gradeables = (user_gradeables
+                          .where(grd_tbl.assignment == assignment.name))
+        init = asn_gradeables.where(grd_tbl.component == 'initial').first()
+        p1 = asn_gradeables.where(grd_tbl.component == 'review1').first()
+        p2 = asn_gradeables.where(grd_tbl.component == 'review2').first()
+        final = asn_gradeables.where(grd_tbl.component == 'final').first()
         oopsieness = get_asmt_oopsieness(oops, assignment.name,
                                          assignment.initial_due_date)
-        ret += str(AsmtTable(assignment.name, oopsieness))
+        ret += str(AsmtTable(assignment.name, oopsieness, init, p1, p2, final))
     return rocket.respond(ret + '</form>')
 
 
